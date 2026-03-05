@@ -1,8 +1,17 @@
-// NOTE: this is wip!
+/**
+ * Adds iOS platform support:
+ *
+ * - ios build configs
+ * - xcode opener (shared with macos.ts)
+ * - a setting 'iosteamid'
+ * - Xcode and app-bundle specific cmake attributes
+ */
 import { Configurer, Builder, ConfigDesc, log } from 'jsr:@floooh/fibs@^1';
+import { addXcodeOpener } from './xcode-opener.ts';
 
 export function configure(c: Configurer) {
     addConfigs(c);
+    addXcodeOpener(c);
     c.addSetting({
         name: 'iosteamid',
         default: 'noteamid',

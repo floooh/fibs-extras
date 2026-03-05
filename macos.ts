@@ -1,15 +1,17 @@
 /**
  * Adds extras to the core macOS platform support:
  *
- * - xcode build configs
- * - ARC vs no-ARC
- * - Xcode specific attributes
+ * - xcode opener
+ * - xcode build configs (with ARC vs non-ARC)
+ * - xcode specific attributes
  * - essential plist.info attributes (e.g. bundle id)
  */
 import { Configurer, ConfigDesc } from 'jsr:@floooh/fibs@^1';
+import { addXcodeOpener } from './xcode-opener.ts';
 
 export function configure(c: Configurer) {
     addConfigs(c);
+    addXcodeOpener(c);
     // inject a couple of default plist and xcode attributes
     c.addTargetAttributeInjector({
         name: 'macos-attrs',
