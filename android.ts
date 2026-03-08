@@ -153,6 +153,8 @@ async function install(project: Project) {
     await unzipFile(zipFilename, sdkDir(project));
 
     // install required SDK packages
+    // FIXME: the platform version (e.g. 'android-30') should
+    // be overridable via import-options
     await installSdkPackage(project, 'platforms;android-30');
     await installSdkPackage(project, 'build-tools');
     await installSdkPackage(project, 'platform-tools');
