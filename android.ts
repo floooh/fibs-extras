@@ -12,16 +12,21 @@ import { Configurer, ConfigDesc, Project, log, util, host } from 'jsr:@floooh/fi
 import { green, yellow } from 'jsr:@std/fmt@^1/colors';
 import { basename } from 'jsr:@std/path@1';
 
-// FIXME: allow url to be provided via import options
+// FIXME: make all these configurable via import options
 const urls = {
     windows: 'https://dl.google.com/android/repository/commandlinetools-win-14742923_latest.zip',
     macos: 'https://dl.google.com/android/repository/commandlinetools-mac-14742923_latest.zip',
     linux: 'https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip',
 };
+const android_abi = 'armeabi-v7a';
+const android_platform = 'android-30';
+const android_package_root = 'org.fibs'
 
 export function configure(c: Configurer) {
     addConfigs(c);
     addTools(c);
+    injectTargetAttributes(c);
+    injectPostBuildStep(c);
     c.addCommand({ name: 'android', help: cmdHelp, run: cmdRun });
 }
 
@@ -31,7 +36,12 @@ function addConfigs(c: Configurer) {
         platform: 'android',
         runner: 'android',
         buildMode: 'debug',
-        toolchainFile: 'fixme',
+        toolchainFile: `${c.sdkDir()}/android/ndk-bundle/build/cmake/android.toolchain.cmake`,
+        // FIXME: make configurable
+        cmakeCacheVariables: {
+            ANDROID_ABI: android_abi,
+            ANDROID_PLATFORM: android_platform,
+        },
         validate: (project: Project) => {
             if (!util.dirExists(sdkDir(project))) {
                 return {
@@ -66,6 +76,48 @@ function addTools(c: Configurer) {
         notFoundMsg: 'required for installing the Android SDK',
         exists: unzipExists,
     });
+}
+
+function injectTargetAttributes(c: Configurer) {
+    c.addTargetAttributeInjector({
+        name: 'android-target-attrs',
+        fn: (t, project, _config) => {
+            if (project.isAndroid() && t.type() === 'windowed-exe') {
+                // override windowed-exe type with dll
+                t.setOverrideType('dll');
+                // don't build into dist dir, but into regular build dir
+                t.addProperties({
+                    LIBRARY_OUTPUT_DIRECTORY: project.buildDir(),
+                    LIBRARY_OUTPUT_DIRECTORY_DEBUG: project.buildDir(),
+                    LIBRARY_OUTPUT_DIRECTORY_RELEASE: project.buildDir(),
+                });
+            }
+        }
+    })
+}
+
+function injectPostBuildStep(c: Configurer) {
+    c.addCmakeCodeInjector({
+        name: 'android-postbuild-jobs',
+        fn: (project, _config) => {
+            let str = '';
+            if (project.isAndroid()) {
+                for (const target of project.targets()) {
+                    if (target.type === 'windowed-exe') {
+                        str += `add_custom_command(TARGET ${target.name} POST_BUILD `;
+                        str += `COMMAND \${DENO} run --allow-all --no-config "${c.selfDir()}/android/create-apk.ts" `;
+                        str += `--path "${project.buildDir()}" `;
+                        str += `--name ${target.name} `;
+                        str += `--abi \${ANDROID_ABI} `;
+                        str += `--version \${ANDROID_PLATFORM_LEVEL} `;
+                        str += `--package ${android_package_root}.${target.name} `;
+                        str += `--deploy "${project.targetDistDir(target.name)}")\n`;
+                    }
+                }
+            }
+            return str;
+        }
+    })
 }
 
 async function javaExists(): Promise<boolean> {
