@@ -106,12 +106,13 @@ function injectPostBuildStep(c: Configurer) {
                     if (target.type === 'windowed-exe') {
                         str += `add_custom_command(TARGET ${target.name} POST_BUILD `;
                         str += `COMMAND \${DENO} run --allow-all --no-config "${c.selfDir()}/android/create-apk.ts" `;
-                        str += `--path "${project.buildDir()}" `;
+                        str += `--importdir "${c.selfDir()}" `;
+                        str += `--builddir "${project.buildDir()}" `;
+                        str += `--targetdistdir "${project.targetDistDir(target.name)}" `;
                         str += `--name ${target.name} `;
                         str += `--abi \${ANDROID_ABI} `;
                         str += `--version \${ANDROID_PLATFORM_LEVEL} `;
-                        str += `--package ${android_package_root}.${target.name} `;
-                        str += `--deploy "${project.targetDistDir(target.name)}")\n`;
+                        str += `--package ${android_package_root}.${target.name})\n`;
                     }
                 }
             }
