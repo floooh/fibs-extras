@@ -21,6 +21,7 @@ const urls = {
 const android_abi = 'armeabi-v7a';
 const android_platform = 'android-30';
 const android_package_root = 'org.fibs'
+const android_build_tools_version = '34.0.0';
 
 export function configure(c: Configurer) {
     addConfigs(c);
@@ -107,11 +108,13 @@ function injectPostBuildStep(c: Configurer) {
                         str += `add_custom_command(TARGET ${target.name} POST_BUILD `;
                         str += `COMMAND \${DENO} run --allow-all --no-config "${c.selfDir()}/android/create-apk.ts" `;
                         str += `--importdir "${c.selfDir()}" `;
+                        str += `--sdkdir "${c.sdkDir()}/android" `;
                         str += `--builddir "${project.buildDir()}" `;
                         str += `--targetdistdir "${project.targetDistDir(target.name)}" `;
                         str += `--name ${target.name} `;
                         str += `--abi \${ANDROID_ABI} `;
-                        str += `--version \${ANDROID_PLATFORM_LEVEL} `;
+                        str += `--platformversion \${ANDROID_PLATFORM_LEVEL} `;
+                        str += `--buildtoolsversion ${android_build_tools_version} `;
                         str += `--package ${android_package_root}.${target.name})\n`;
                     }
                 }
@@ -208,8 +211,8 @@ async function install(project: Project) {
     // install required SDK packages
     // FIXME: the platform version (e.g. 'android-30') should
     // be overridable via import-options
-    await installSdkPackage(project, 'platforms;android-30');
-    await installSdkPackage(project, 'build-tools');
+    await installSdkPackage(project, `platforms;${android_platform}`);
+    await installSdkPackage(project, `build-tools;${android_build_tools_version}`);
     await installSdkPackage(project, 'platform-tools');
     await installSdkPackage(project, 'ndk-bundle');
 }
