@@ -7,8 +7,8 @@
     First import the job like this:
 
     c.addImport({
-      name: 'utils',
-      url: 'https://github.com/floooh/fibs-utils',
+      name: 'extras',
+      url: 'https://github.com/floooh/fibs-extras',
       files: ['copyfiles.ts'],
     });
 
