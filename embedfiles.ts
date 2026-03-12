@@ -1,6 +1,38 @@
-/*
-    FIXME: describe embedfiles
-*/
+/**
+ * Generate C headers with binary data as byte arrays.
+ *
+ *   dir?: string - base dir of files to embed (default: target source dir)
+ *   files: string[] - list of files to embed
+ *   outHeader: string - path of generated header file
+ *   prefix?: string - optional prefix for C array name (default: embed_)
+ *   list?: boolean - if true, generate a table of content (default: false)
+ *   asText?: boolean - if true, embed as zero-terminated string (default: false)
+ *   asConst?: boolean - if true, emit const data (default: true)
+ *   asStatic?: boolean - if true, emit static data (default: true)
+ *
+ * First import the job like this:
+ *
+ *   c.addImport({
+ *     name: 'extras',
+ *     url: 'https://github.com/floooh/fibs-extras',
+ *     files: ['embedfiles.ts'],
+ *   });
+ *
+ * Now you can run `fibs list jobs` to get a description of the embedfiles job.
+ *
+ * Then add a buildjob to any target which needs to embed files, for example:
+ *
+ *    t.addJob({
+ *      job: 'embedfiles',
+ *      args: {
+ *        dir: 'disks',
+ *        outHeader: 'fdd-test.h',
+ *        prefix: 'dump_',
+ *        asConst: false,
+ *        files: ['boulderdash_cpc.dsk', 'dtc_cpc.dsk' ],
+ *      }
+ *    });
+ */
 import { Config, Configurer, log, Project, Schema, Target, util } from 'jsr:@floooh/fibs@^1';
 import { basename, dirname } from 'jsr:@std/path@^1';
 

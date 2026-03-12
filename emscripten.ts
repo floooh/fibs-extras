@@ -1,3 +1,11 @@
+/**
+ * Add Emscripten platform support:
+ *
+ * - command to install/uninstall the Emscripten SDK
+ * - build configs
+ * - integrate the Emscripten cmake toolchain file
+ * - add runner to run via emrun
+ */
 import {
     Builder,
     Config,
