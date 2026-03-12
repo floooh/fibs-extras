@@ -157,3 +157,81 @@ await util.runCmd(D8, {
     ],
     cwd: apkDir,
 });
+
+// package the apk
+await util.runCmd(AAPT, {
+    args: [
+        'package',
+        '-v', '-f',
+        '-S', 'res',
+        '-A', 'assets',
+        '-M', 'AndroidManifest.xml',
+        '-I', ANDROID_JAR,
+        '-F', `${buildDir}/${name}-unaligned.apk`,
+        'bin'
+    ],
+    cwd: apkDir,
+});
+await util.runCmd(AAPT, {
+    args: [
+        'add', '-v',
+        `${buildDir}/${name}-unaligned.apk`,
+        `${libsDir}/${soFilename}`,
+    ],
+    cwd: apkDir,
+});
+
+// run zipalign on the unaligned apk
+await util.runCmd(ZIPALIGN, {
+    args: [
+        '-f', '4',
+        `${buildDir}/${name}-unaligned.apk`,
+        `${buildDir}/${name}.apk`
+    ],
+    cwd: apkDir,
+});
+
+// create debug signing key
+const keyStorePath = `${buildDir}/debug.keystore`;
+if (!util.fileExists(keyStorePath)) {
+    await util.runCmd('keytool', {
+        args: [
+            '-genkeypair',
+            '-keystore', keyStorePath,
+            '-storepass', 'android',
+            '-alias', 'androiddebugkey',
+            '-keypass', 'android',
+            '-keyalg', 'RSA',
+            '-validity', '10000',
+            '-dname', 'CN=,OU=,O=,L=,S=,C='
+        ],
+        cwd: apkDir,
+    });
+}
+
+// sign the apk
+await util.runCmd(APKSIGNER, {
+    args: [
+        'sign',
+        '-v',
+        '--ks', keyStorePath,
+        '--ks-pass', 'pass:android',
+        '--key-pass', 'pass:android',
+        '--ks-key-alias', 'androiddebugkey',
+        `${buildDir}/${name}.apk`,
+    ],
+    cwd: apkDir,
+});
+
+// verify the apk
+await util.runCmd(APKSIGNER, {
+    args: [
+        'verify',
+        '-v',
+        `${buildDir}/${name}.apk`,
+    ],
+    cwd: apkDir,
+});
+
+// copy apk to targetdistdir
+Deno.copyFileSync(`${buildDir}/${name}.apk`, `${distDir}/${name}.apk`);
