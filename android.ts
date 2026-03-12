@@ -8,7 +8,7 @@
  * - add post-build jobs to create Android APKs for each exe-target
  * - a runner to run on device via adb
  */
-import { Configurer, ConfigDesc, Project, log, util, host } from 'jsr:@floooh/fibs@^1';
+import { Configurer, Config, ConfigDesc, Project, Target, RunOptions, log, util, host } from 'jsr:@floooh/fibs@^1';
 import { green, yellow } from 'jsr:@std/fmt@^1/colors';
 import { basename } from 'jsr:@std/path@1';
 
@@ -18,10 +18,10 @@ const urls = {
     macos: 'https://dl.google.com/android/repository/commandlinetools-mac-14742923_latest.zip',
     linux: 'https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip',
 };
-const android_abi = 'armeabi-v7a';
-const android_platform = 'android-30';
-const android_package_root = 'org.fibs'
-const android_build_tools_version = '34.0.0';
+const androidAbi = 'armeabi-v7a';
+const androidPlatform = 'android-30';
+const androidPackageRoot = 'org.fibs'
+const androidBuildToolsVersion = '34.0.0';
 
 export function configure(c: Configurer) {
     addConfigs(c);
@@ -29,6 +29,7 @@ export function configure(c: Configurer) {
     injectTargetAttributes(c);
     injectPostBuildStep(c);
     c.addCommand({ name: 'android', help: cmdHelp, run: cmdRun });
+    c.addRunner({ name: 'android', run: runnerRun });
 }
 
 function addConfigs(c: Configurer) {
@@ -40,8 +41,8 @@ function addConfigs(c: Configurer) {
         toolchainFile: `${c.sdkDir()}/android/ndk-bundle/build/cmake/android.toolchain.cmake`,
         // FIXME: make configurable
         cmakeCacheVariables: {
-            ANDROID_ABI: android_abi,
-            ANDROID_PLATFORM: android_platform,
+            ANDROID_ABI: androidAbi,
+            ANDROID_PLATFORM: androidPlatform,
         },
         validate: (project: Project) => {
             if (!util.dirExists(sdkDir(project))) {
@@ -97,6 +98,10 @@ function injectTargetAttributes(c: Configurer) {
     })
 }
 
+function getPackageName(target: Target): string {
+    return `${androidPackageRoot}.${target.name.replaceAll('-', '_')}`;
+}
+
 function injectPostBuildStep(c: Configurer) {
     c.addCmakeCodeInjector({
         name: 'android-postbuild-jobs',
@@ -114,8 +119,8 @@ function injectPostBuildStep(c: Configurer) {
                         str += `--name ${target.name} `;
                         str += `--abi \${ANDROID_ABI} `;
                         str += `--platformversion \${ANDROID_PLATFORM_LEVEL} `;
-                        str += `--buildtoolsversion ${android_build_tools_version} `;
-                        str += `--package ${android_package_root}.${target.name})\n`;
+                        str += `--buildtoolsversion ${androidBuildToolsVersion} `;
+                        str += `--package ${getPackageName(target)})\n`;
                     }
                 }
             }
@@ -164,7 +169,7 @@ function cmdHelp() {
 }
 
 async function cmdRun(project: Project, cmdLineArgs: string[]) {
-    const args = parseArgs(cmdLineArgs);
+    const args = cmdParseArgs(cmdLineArgs);
     if (args.install) {
         await install(project);
     } else if (args.uninstall) {
@@ -172,11 +177,11 @@ async function cmdRun(project: Project, cmdLineArgs: string[]) {
     }
 }
 
-function parseArgs(cmdLineArgs: string[]): {
+function cmdParseArgs(cmdLineArgs: string[]): {
     install?: boolean,
     uninstall?: boolean,
 } {
-    const args: ReturnType<typeof parseArgs> = {};
+    const args: ReturnType<typeof cmdParseArgs> = {};
     if (cmdLineArgs[1] === undefined) {
         throw new Error(`expected a subcommand (run 'fibs help android')`);
     }
@@ -211,8 +216,8 @@ async function install(project: Project) {
     // install required SDK packages
     // FIXME: the platform version (e.g. 'android-30') should
     // be overridable via import-options
-    await installSdkPackage(project, `platforms;${android_platform}`);
-    await installSdkPackage(project, `build-tools;${android_build_tools_version}`);
+    await installSdkPackage(project, `platforms;${androidPlatform}`);
+    await installSdkPackage(project, `build-tools;${androidBuildToolsVersion}`);
     await installSdkPackage(project, 'platform-tools');
     await installSdkPackage(project, 'ndk-bundle');
 }
@@ -279,4 +284,21 @@ async function uninstall(project: Project) {
     } else {
         log.warn('Android SDK not installed, nothing to do.');
     }
+}
+
+async function runnerRun(project: Project, config: Config, target: Target, _options: RunOptions) {
+    const adbPath = `${sdkDir(project)}/platform-tools/adb`;
+    const pkgName = getPackageName(target);
+    const cwd = project.targetDistDir(target.name, config.name);
+    await util.runCmd(adbPath, { args: [ 'uninstall', pkgName ], cwd });
+    await util.runCmd(adbPath, { args: [ 'install', `${target.name}.apk`], cwd });
+    await util.runCmd(adbPath, {
+        args: [
+            'shell', 'am',
+            'start',
+            '-n', `${pkgName}/android.app.NativeActivity`,
+        ],
+        cwd,
+    });
+    await util.runCmd(adbPath, { args: ['logcat'], cwd });
 }

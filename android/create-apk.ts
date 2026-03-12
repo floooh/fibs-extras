@@ -176,7 +176,7 @@ await util.runCmd(AAPT, {
     args: [
         'add', '-v',
         `${buildDir}/${name}-unaligned.apk`,
-        `${libsDir}/${soFilename}`,
+        `lib/${abi}/${soFilename}`,
     ],
     cwd: apkDir,
 });
