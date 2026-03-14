@@ -135,32 +135,32 @@ function getShdcPath(p: Project): string {
 
 function getDefaultSlang(p: Project): string {
     if (p.findCompileDefinition('SOKOL_GLCORE')) {
-        log.info('# sokolshdc: found SOKOL_GLCORE definition, using glsl430');
+        log.debug('# sokolshdc: found SOKOL_GLCORE definition, using glsl430');
         return 'glsl430';
     } else if (p.findCompileDefinition('SOKOL_GLES3')) {
         if (p.isAndroid()) {
-            log.info('# sokolshdc: found SOKOL_GLES3 definition and android platform, using glsl310es');
+            log.debug('# sokolshdc: found SOKOL_GLES3 definition and android platform, using glsl310es');
             return 'glsl310es';
         } else {
-            log.info('# sokolshdc: found SOKOL_GLES3 definition, using glsl300es');
+            log.debug('# sokolshdc: found SOKOL_GLES3 definition, using glsl300es');
             return 'glsl300es';
         }
     } else if (p.findCompileDefinition('SOKOL_D3D11')) {
-        log.info('# sokolshdc: found SOKOL_D3D11 definition, using hlsl5');
+        log.debug('# sokolshdc: found SOKOL_D3D11 definition, using hlsl5');
         return 'hlsl5';
     } else if (p.findCompileDefinition('SOKOL_METAL')) {
         if (p.isMacOS()) {
-            log.info('# sokolshdc: found SOKOL_METAL definition and macos platform, using metal_macos');
+            log.debug('# sokolshdc: found SOKOL_METAL definition and macos platform, using metal_macos');
             return 'metal_macos';
         } else {
-            log.info('# sokolshdc: found SOKOL_METAL definition and ios platform, using metal_ios:metal_sim');
+            log.debug('# sokolshdc: found SOKOL_METAL definition and ios platform, using metal_ios:metal_sim');
             return 'metal_ios:metal_sim';
         }
     } else if (p.findCompileDefinition('SOKOL_WGPU')) {
-        log.info('# sokolshdc: found SOKOL_WGPU definition, using wgsl');
+        log.debug('# sokolshdc: found SOKOL_WGPU definition, using wgsl');
         return 'wgsl';
     } else if (p.findCompileDefinition('SOKOL_VULKAN')) {
-        log.info('# sokolshdc: found SOKOL_VULKAN definition, using spirv_vk');
+        log.debug('# sokolshdc: found SOKOL_VULKAN definition, using spirv_vk');
         return 'spirv_vk';
     } else {
         // no platform definition found, use
@@ -182,7 +182,7 @@ function getDefaultSlang(p: Project): string {
                 slang = 'glsl300es';
                 break;
         }
-        log.info(`# sokolshdc: no SOKOL_* backend definition found, selected ${slang}`);
+        log.debug(`# sokolshdc: no SOKOL_* backend definition found, selected ${slang}`);
         return slang;
     }
 }
