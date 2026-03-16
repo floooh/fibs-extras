@@ -99,7 +99,7 @@ function buildJob(p: Project, c: Config, t: Target, args: unknown) {
                     '--bytecode',
                 ];
                 if (defines !== undefined) {
-                    shdcArgs.push('--defines', ...defines);
+                    shdcArgs.push('--defines', defines.join(':'));
                 }
                 if (module !== undefined) {
                     shdcArgs.push('--module', module);
