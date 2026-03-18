@@ -90,7 +90,7 @@ export function build(b: Builder) {
             b.addLinkOptions({ opts: ['-flto'], buildMode: 'release' });
         }
         if (useClosure) {
-            b.addLinkOptions({ opts: ['--closure 1'], buildMode: 'release' });
+            b.addLinkOptions({ opts: ['--closure', '1'], buildMode: 'release' });
         }
         if (useMinimalShellFile) {
             b.addLinkOptions([`--shell-file=${b.selfDir()}/shell.html`]);
