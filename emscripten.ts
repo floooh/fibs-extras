@@ -60,6 +60,13 @@ export function help(importName: string) {
 export function configure(c: Configurer) {
     c.addCommand({ name: 'emsdk', help: cmdHelp, run: cmdRun });
     c.addRunner({ name: 'emscripten', run: runnerRun });
+    c.addTool({
+        name: 'http-server',
+        platforms: ['windows', 'linux', 'macos'],
+        optional: true,
+        notFoundMsg: `needed for Emscripten runner, install via 'npm install -g http-server'`,
+        exists: httpServerExists,
+    });
     addConfigs(c);
 }
 
@@ -152,6 +159,20 @@ async function cmdRun(project: Project, cmdLineArgs: string[]) {
     }
 }
 
+async function httpServerExists(): Promise<boolean> {
+    try {
+        await util.runCmd('http-server', {
+            args: ['--version'],
+            stdout: 'piped',
+            stderr: 'piped',
+            showCmd: false,
+        });
+        return true;
+    } catch (_err) {
+        return false;
+    }
+}
+
 async function runnerRun(
     project: Project,
     config: Config,
@@ -161,21 +182,11 @@ async function runnerRun(
     await emrun(project, { cwd: project.distDir(config.name), file: `${target.name}.html` });
 }
 
+// NOTE: need to use node's http-server because `emrun` of the Emscripten SDK
+// cannot handle range requests used by sokol-fetch
 export async function emrun(project: Project, options: { cwd: string; file: string }) {
     const { cwd, file } = options;
-    const emrunFilename = project.isHostWindows() ? 'emrun.bat' : 'emrun';
-    const emrunPath = `${project.sdkDir()}/emsdk/upstream/emscripten/${emrunFilename}`;
-    // on macOS, explicitly use Chrome instead of Safari, emrun picks Safari even
-    // when Chrome is set as the system default browser
-    // FIXME: this should be configurable via cmdline args
-    let forceChromeArgs: string[] = [];
-    if (project.isHostMacOS()) {
-        forceChromeArgs = ['--browser', 'chrome'];
-    }
-    await util.runCmd(emrunPath, {
-        cwd,
-        args: [...forceChromeArgs, file],
-    });
+    util.runCmd('http-server', { args: [ '-c-1', '-g', '-o', file ], cwd });
 }
 
 function parseArgs(cmdLineArgs: string[]): {
