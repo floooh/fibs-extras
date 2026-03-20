@@ -6,7 +6,7 @@
  * - xcode specific attributes
  * - essential plist.info attributes (e.g. bundle id)
  */
-import { Configurer, ConfigDesc } from 'jsr:@floooh/fibs@^1';
+import { Configurer, ConfigDesc, Builder } from 'jsr:@floooh/fibs@^1';
 import { addXcodeOpener } from './xcode-opener.ts';
 
 export function configure(c: Configurer) {
@@ -38,6 +38,12 @@ export function configure(c: Configurer) {
             }
         },
     });
+}
+
+export function build(b: Builder) {
+    if (b.isMacOS() && b.activeConfig().generator === 'xcode') {
+        b.addCmakeVariable('CMAKE_XCODE_GENERATE_SCHEME', '1');
+    }
 }
 
 function addConfigs(c: Configurer) {

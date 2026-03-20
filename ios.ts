@@ -48,7 +48,9 @@ export function build(b: Builder) {
         if (b.setting('iosteamid').value === b.setting('iosteamid').default) {
             log.warn(`No 'iosteamid' setting provided, only simulator builds supported`);
         }
-        if (b.activeConfig().generator !== 'xcode') {
+        if (b.activeConfig().generator === 'xcode') {
+            b.addCmakeVariable('CMAKE_XCODE_GENERATE_SCHEME', '1');
+        } else {
             log.warn('Building for ios only supported with Xcode generator');
         }
     }
