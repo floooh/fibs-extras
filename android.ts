@@ -245,6 +245,7 @@ async function downloadFile(url: string, dstFilePath: string) {
             const receivedMB = (receivedBytes / (1024 * 1024)).toFixed(2);
             Deno.stdout.writeSync(new TextEncoder().encode(`\r ${receivedMB} MB`));
         }
+        await writer.close();
     }
 }
 
