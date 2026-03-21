@@ -43,7 +43,7 @@ const SDK_HOME = args.sdkdir;
 const ANDROID_JAR = `${SDK_HOME}/platforms/android-${args.platformversion}/android.jar`;
 const BUILD_TOOLS = `${SDK_HOME}/build-tools/${args.buildtoolsversion}`;
 const EXE = Deno.build.os === 'windows' ? '.exe' : '';
-const BAT = Deno.build.os === 'windows' ? '.exe' : '';
+const BAT = Deno.build.os === 'windows' ? '.bat' : '';
 const AAPT = `${BUILD_TOOLS}/aapt${EXE}`;
 const D8 = `${BUILD_TOOLS}/d8${BAT}`;
 const ZIPALIGN = `${BUILD_TOOLS}/zipalign${EXE}`;
