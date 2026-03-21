@@ -68,8 +68,15 @@ function addTools(c: Configurer) {
         name: 'java',
         platforms: ['windows', 'macos', 'linux'],
         optional: true,
-        notFoundMsg: 'required for Android development',
-        exists: javaExists,
+        notFoundMsg: 'required for Android development (part of JDK 17)',
+        exists: () => javaToolExists('java'),
+    });
+    c.addTool({
+        name: 'javac',
+        platforms: ['windows', 'macos', 'linux'],
+        optional: true,
+        notFoundMsg: 'required for Android development (part of JDK 17)',
+        exists: () => javaToolExists('javac'),
     });
     c.addTool({
         name: 'unzip',
@@ -129,9 +136,9 @@ function injectPostBuildStep(c: Configurer) {
     })
 }
 
-async function javaExists(): Promise<boolean> {
+async function javaToolExists(cmd: string): Promise<boolean> {
     try {
-        await util.runCmd('java', {
+        await util.runCmd(cmd, {
             args: ['-version'],
             stdout: 'piped',
             stderr: 'piped',
@@ -194,8 +201,8 @@ function cmdParseArgs(cmdLineArgs: string[]): {
 }
 
 async function install(project: Project) {
-    if (!(await javaExists())) {
-        throw new Error(`please install a Java JDK version 8 (run 'fibs diag tools')`);
+    if (!(await javaToolExists('javac'))) {
+        throw new Error(`please install a Java JDK version 17 (run 'fibs diag tools')`);
     }
     if (!(await unzipExists())) {
         throw new Error(`can't find 'unzip' cmdline tool (run 'fibs diag tools')`);
