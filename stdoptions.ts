@@ -3,11 +3,11 @@ import { Builder } from 'jsr:@floooh/fibs@^1';
 
 export function build(b: Builder) {
     if (b.isMsvc()) {
+        b.addCmakeVariable('CMAKE_MSVC_RUNTIME_LIBRARY', 'MultiThreaded$<$<CONFIG:Debug>:Debug>');
         // warning level 4
         // minimal exception handling
-        // multithreaded compilation
         // static stdlib
-        b.addCompileOptions(['/W4', '/EHsc', '/MP', '/MT']);
+        b.addCompileOptions(['/W4', '/EHsc', '/MP']);
         b.addCompileOptions({ opts: ['/O2'], buildMode: 'release' });
         b.addCompileDefinitions({ _CRT_SECURE_NO_WARNINGS: '1' });
         // link-time-code-generation flags
