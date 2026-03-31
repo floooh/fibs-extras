@@ -135,8 +135,13 @@ function getShdcPath(p: Project): string {
 
 function getDefaultSlang(p: Project): string {
     if (p.findCompileDefinition('SOKOL_GLCORE')) {
-        log.debug('# sokolshdc: found SOKOL_GLCORE definition, using glsl430');
-        return 'glsl430';
+        if (p.isMacOS()) {
+            log.debug('# sokolshdc: found SOKOL_GLCORE definition and macOS target platform, using glsl410');
+            return 'glsl410';
+        } else {
+            log.debug('# sokolshdc: found SOKOL_GLCORE definition, using glsl430');
+            return 'glsl430';
+        }
     } else if (p.findCompileDefinition('SOKOL_GLES3')) {
         if (p.isAndroid()) {
             log.debug('# sokolshdc: found SOKOL_GLES3 definition and android platform, using glsl310es');
