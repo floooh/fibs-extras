@@ -66,10 +66,10 @@ function buildJob(p: Project, c: Config, t: Target, args: unknown) {
         addOutputsToTargetSources: false,
         args: { srcDir, dstDir, files },
         func: async (inputs: string[], outputs: string[], _args: Args): Promise<void> => {
-            if (util.dirty(inputs, outputs)) {
-                for (let i = 0; i < inputs.length; i++) {
-                    const from = inputs[i];
-                    const to = outputs[i];
+            for (let i = 0; i < inputs.length; i++) {
+                const from = inputs[i];
+                const to = outputs[i];
+                if (util.dirty([from], [to])) {
                     log.info(`# cp ${from} ${to}`);
                     util.ensureDir(dirname(to));
                     copySync(from, to, { overwrite: true });
