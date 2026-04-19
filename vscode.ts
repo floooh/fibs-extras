@@ -45,23 +45,20 @@ async function open(project: Project) {
 }
 
 function writeWorkspaceFile(project: Project, config: Config, vscodeDir: string) {
+    const importDirs = project.imports().map((imp) => imp.importDir);
     const ws = {
         folders: [
             { path: project.dir() },
-            ...project.imports().map((imp) => {
-                return { path: imp.importDir };
-            }),
+            ...importDirs.map((d) => ({ path: d })),
         ],
         settings: {
-            'cmake.statusbar.advanced': {
-                ctest: { visibility: 'hidden' },
-                testPreset: { visibility: 'hidden' },
-                debug: { visibility: 'hidden' },
-            },
             'cmake.debugConfig': { cwd: project.distDir(config.name) },
             'cmake.autoSelectActiveFolder': false,
             'cmake.ignoreCMakeListsMissing': true,
             'cmake.configureOnOpen': false,
+            'cmake.enableAutomaticKitScan': false,
+            'cmake.useCMakePresets': 'always',
+            'cmake.exclude': importDirs,
         },
     };
     const path = `${vscodeDir}/${project.name()}.code-workspace`;
