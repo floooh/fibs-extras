@@ -128,7 +128,7 @@ function getShdcPath(p: Project): string {
     } else if (p.isHostMacOS()) {
         dir = (p.hostArch() === 'arm64') ? 'osx_arm64' : 'osx';
     } else {
-        dir = 'linux';
+        dir = (p.hostArch() === 'arm64') ? 'linux_arm64' : 'linux';
     }
     return `${p.importsDir()}/sokol-tools-bin/bin/${dir}/sokol-shdc`;
 }
