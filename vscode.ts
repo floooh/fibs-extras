@@ -108,6 +108,12 @@ function writeLaunchJson(project: Project, config: Config, vscodeDir: string) {
                 args: [],
                 type: getType(),
                 MIMode: getMIMode(),
+                // tweak lldb for faster startup on macOS
+                initCommands: getType() !== 'lldb' ? undefined : [
+                    "settings set symbols.load-on-demand true",
+                    "settings set symbols.enable-external-lookup false",
+                    "settings set symbols.enable-lldb-index-cache true"
+                ],
             }],
         };
     }
