@@ -114,6 +114,7 @@ function writeLaunchJson(project: Project, config: Config, vscodeDir: string) {
                     "settings set symbols.enable-external-lookup false",
                     "settings set symbols.enable-lldb-index-cache true"
                 ],
+                env: { 'MTL_DEBUG_LAYER': '1' },
             }],
         };
     }
