@@ -130,7 +130,7 @@ function getShdcPath(p: Project): string {
     } else {
         dir = (p.hostArch() === 'arm64') ? 'linux_arm64' : 'linux';
     }
-    return `${p.importsDir()}/sokol-tools-bin/bin/${dir}/sokol-shdc`;
+    return `${p.import('sokol-shdc').importDir}/bin/${dir}/sokol-shdc`;
 }
 
 function getDefaultSlang(p: Project): string {
