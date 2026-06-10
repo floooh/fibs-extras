@@ -36,32 +36,31 @@
     <body>
         <canvas class="game" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
         <script type="text/javascript">
+            // NOTE: Module must remain var, otherwise the Emscripten shim throws an error
             var Module = {
                 preRun: [],
                 postRun: [],
-                print: (function () {
+                print: (() => {
                     return function (text) {
                         text = Array.prototype.slice.call(arguments).join(' ');
                         console.log(text);
                     };
                 })(),
-                printErr: function (text) {
+                printErr: (text) => {
                     text = Array.prototype.slice.call(arguments).join(' ');
                     console.error(text);
                 },
-                canvas: (function () {
-                    var canvas = document.getElementById('canvas');
-                    //canvas.addEventListener("webglcontextlost", function(e) { alert('FIXME: WebGL context lost, please reload the page'); e.preventDefault(); }, false);
-                    return canvas;
+                canvas: (() => {
+                    return document.getElementById('canvas');
                 })(),
-                setStatus: function (text) {
+                setStatus: (text) => {
                     console.log('status: ' + text);
                 },
-                monitorRunDependencies: function (left) {
+                monitorRunDependencies: (left) => {
                     console.log('monitor run deps: ' + left);
                 },
             };
-            window.onerror = function () {
+            window.onerror = () => {
                 console.log('onerror: ' + event.message);
             };
         </script>
