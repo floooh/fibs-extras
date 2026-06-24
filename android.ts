@@ -18,7 +18,7 @@ const urls = {
     macos: 'https://dl.google.com/android/repository/commandlinetools-mac-14742923_latest.zip',
     linux: 'https://dl.google.com/android/repository/commandlinetools-linux-14742923_latest.zip',
 };
-const androidAbi = 'armeabi-v7a';
+const androidAbi = 'arm64-v8a';
 const androidPlatform = 'android-30';
 const androidPackageRoot = 'org.fibs'
 const androidBuildToolsVersion = '34.0.0';
