@@ -112,7 +112,8 @@ function writeLaunchJson(project: Project, config: Config, vscodeDir: string) {
                 initCommands: getType() !== 'lldb' ? undefined : [
                     "settings set symbols.load-on-demand true",
                     "settings set symbols.enable-external-lookup false",
-                    "settings set symbols.enable-lldb-index-cache true"
+                    // NOTE: enable-lldb-index-cache is crashy with CodeLLDB
+                    // "settings set symbols.enable-lldb-index-cache true"
                 ],
                 env: { 'MTL_DEBUG_LAYER': '1' },
             }],
