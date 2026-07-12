@@ -82,6 +82,7 @@ export function build(b: Builder) {
             useClosure = true,
             useMinimalShellFile = true,
         } = b.importOptions<ImportOptions>('emscripten', schema);
+        b.addLinkOptions(['-sGROWABLE_ARRAYBUFFERS=0']);
         b.addLinkOptions([`-sINITIAL_MEMORY=${initialMemory}`, `-sSTACK_SIZE=${stackSize}`]);
         if (allowMemoryGrowth) {
             b.addLinkOptions(['-sALLOW_MEMORY_GROWTH=1']);
@@ -204,9 +205,7 @@ function parseArgs(cmdLineArgs: string[]): {
             args.install = true;
             args.version = cmdLineArgs[2];
             if (args.version === undefined) {
-                log.warn('using emsdk version 6.0.1 instead of latest (see: https://github.com/emscripten-core/emscripten/issues/27241)')
-                args.version = '6.0.1';
-                // args.version = 'latest';
+                args.version = 'latest';
             }
             break;
         case 'list':
