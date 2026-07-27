@@ -103,6 +103,10 @@ export function build(b: Builder) {
         if (useMinimalShellFile) {
             b.addLinkOptions([`--shell-file=${b.selfDir()}/shell.html`]);
         }
+        // additional debug mode flags
+        const dbg_flags = ['-g', '-gdwarf-5', '-gpubnames']
+        b.addCompileOptions({ opts: dbg_flags, buildMode: 'debug' });
+        b.addLinkOptions({ opts: dbg_flags, buildMode: 'debug' });
     }
 }
 
