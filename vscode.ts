@@ -1,4 +1,4 @@
-import { Config, ConfigDesc, Configurer, Project, RunOptions, RunResult, ToolDesc, util } from 'jsr:@floooh/fibs@^1';
+import { Config, ConfigDesc, Configurer, Project, RunOptions, RunResult, ToolDesc, util, imports } from 'jsr:@floooh/fibs@^1';
 
 export function configure(c: Configurer) {
     c.addOpener({ name: 'vscode', generate, open });
@@ -45,7 +45,7 @@ async function open(project: Project) {
 }
 
 function writeWorkspaceFile(project: Project, config: Config, vscodeDir: string) {
-    const importDirs = project.imports().map((imp) => imp.importDir);
+    const importDirs = project.imports().filter((imp) => imports.isLinked(project, imp.name)).map((imp) => imp.importDir);
     const ws = {
         folders: [
             { path: project.dir() },
