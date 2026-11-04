@@ -349,6 +349,8 @@ async function runnerRun(project: Project, config: Config, target: Target, _opti
     const adbPath = `${sdkDir(project)}/platform-tools/adb`;
     const pkgName = getPackageName(target);
     const cwd = project.targetDistDir(target.name, config.name);
+    // NOTE: kill a running lldb-server before uninstalling, otherwise it becomes an orphan
+    await stopOnDevice(project, pkgName);
     await util.runCmd(adbPath, { args: [ 'uninstall', pkgName ], cwd });
     await util.runCmd(adbPath, { args: [ 'install', `${target.name}.apk`], cwd });
     await util.runCmd(adbPath, {
@@ -381,16 +383,20 @@ async function debug(project: Project, targetName: string, wait: boolean) {
     if (!util.fileExists(apkPath)) {
         throw new Error(`${apkPath} not found (run 'fibs build ${target.name}')`);
     }
-    const socket = `/${pkg}/debug.sock`;
+    // NOTE: a unique socket name per run, because an orphaned lldb-server from a previously
+    // uninstalled app (which can't be killed without root) may still block the old name
+    const socket = `/${pkg}/debug-${Date.now()}.sock`;
     // remove stale lldb scripts, so that the debugger fails early if this command fails
     removeLldbScripts(project, config);
+    // NOTE: stop before (re-)installing, since after an uninstall the app gets a new user id,
+    // and the old lldb-server can't be killed via 'run-as' anymore
+    await stopOnDevice(project, pkg);
     // NOTE: updating fails if the installed app was signed with a different debug key
     // (the debug keystore is created per build dir), in that case uninstall first
     if ((await adb(project, ['install', '-r', apkPath], { check: false })).exitCode !== 0) {
         await adb(project, ['uninstall', pkg], { check: false });
         await adb(project, ['install', apkPath]);
     }
-    await stopOnDevice(project, pkg);
 
     // lldb-server must run as app user from the app data dir to be able to attach
     await adb(project, ['push', lldbServerPath(project), '/data/local/tmp/lldb-server']);
