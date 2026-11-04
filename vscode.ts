@@ -1,3 +1,4 @@
+// LLM assisted.
 import { Config, ConfigDesc, Configurer, Project, RunOptions, RunResult, ToolDesc, util, imports } from 'jsr:@floooh/fibs@^1';
 
 export function configure(c: Configurer) {
@@ -6,6 +7,7 @@ export function configure(c: Configurer) {
     c.addTool(vscodeCmakeTools);
     c.addTool(vscodeCppTools);
     c.addTool(vscodeWasmDwarfDebugging);
+    c.addTool(vscodeCodeLLDB);
     addConfigs(c);
 }
 
@@ -31,7 +33,12 @@ async function generate(project: Project, config: Config) {
     const vscodeDir = `${project.dir()}/.vscode`;
     util.ensureDir(vscodeDir);
     writeWorkspaceFile(project, config, vscodeDir);
-    writeLaunchJson(project, config, vscodeDir);
+    if (project.isAndroid()) {
+        writeAndroidLaunchJson(project, config, vscodeDir);
+        writeAndroidTasksJson(project, vscodeDir);
+    } else {
+        writeLaunchJson(project, config, vscodeDir);
+    }
     if (project.isEmscripten()) {
         writeHttpServer(project, config);
     }
@@ -59,6 +66,9 @@ function writeWorkspaceFile(project: Project, config: Config, vscodeDir: string)
             'cmake.enableAutomaticKitScan': false,
             'cmake.useCMakePresets': 'always',
             'cmake.exclude': importDirs,
+            // the Android debug task is still running when debugging starts, VSCode
+            // would then show an error popup for any error in the Problems panel
+            ...(project.isAndroid() ? { 'debug.onTaskErrors': 'debugAnyway' } : {}),
         },
     };
     const path = `${vscodeDir}/${project.name()}.code-workspace`;
@@ -127,6 +137,78 @@ function writeLaunchJson(project: Project, config: Config, vscodeDir: string) {
     }
 }
 
+// Android debugging via CodeLLDB, the lldb scripts are written by 'fibs android debug' (see android.ts)
+function writeAndroidLaunchJson(project: Project, config: Config, vscodeDir: string) {
+    const buildDir = project.buildDir(config.name);
+    const androidConfig = (name: string, preLaunchTask: string) => ({
+        name,
+        type: 'lldb',
+        request: 'launch',
+        preLaunchTask,
+        postDebugTask: 'fibs: android stop',
+        targetCreateCommands: [`command source ${buildDir}/android-target.lldb`],
+        processCreateCommands: [`command source ${buildDir}/android-process.lldb`],
+    });
+    const launch = {
+        version: '0.2.0',
+        configurations: [
+            androidConfig('Android: Debug', 'fibs: android debug --wait'),
+            androidConfig('Android: Debug (no wait)', 'fibs: android debug'),
+        ],
+    };
+    const path = `${vscodeDir}/launch.json`;
+    try {
+        Deno.writeTextFileSync(path, JSON.stringify(launch, null, '  '));
+    } catch (err) {
+        throw new Error(`Failed writing ${path}`, { cause: err });
+    }
+}
+
+function writeAndroidTasksJson(project: Project, vscodeDir: string) {
+    // NOTE: Android targets are shared libraries, so CMake Tools has no launch target, use the build target instead
+    const target = '${command:cmake.buildTargetName}';
+    const fibsTask = (label: string, args: string[]) => ({
+        label,
+        type: 'shell',
+        command: './fibs',
+        windows: { command: '.\\fibs.cmd' },
+        args,
+        options: { cwd: project.dir() },
+        problemMatcher: [],
+    });
+    // the debug task keeps running in --wait mode, VSCode starts debugging once
+    // the ready marker printed by 'fibs android debug' shows up
+    const debugTask = (label: string, args: string[]) => ({
+        ...fibsTask(label, args),
+        dependsOn: 'fibs: android build',
+        isBackground: true,
+        problemMatcher: {
+            owner: 'fibs',
+            pattern: { regexp: '^__fibs_no_match__$' },
+            background: {
+                activeBegin: true,
+                beginsPattern: '^fibs android debug: starting',
+                endsPattern: '^fibs android debug: ready',
+            },
+        },
+    });
+    const tasks = {
+        version: '2.0.0',
+        tasks: [
+            fibsTask('fibs: android build', ['build', target]),
+            debugTask('fibs: android debug', ['android', 'debug', target]),
+            debugTask('fibs: android debug --wait', ['android', 'debug', target, '--wait']),
+            fibsTask('fibs: android stop', ['android', 'stop', target]),
+        ],
+    };
+    const path = `${vscodeDir}/tasks.json`;
+    try {
+        Deno.writeTextFileSync(path, JSON.stringify(tasks, null, '  '));
+    } catch (err) {
+        throw new Error(`Failed writing ${path}`, { cause: err });
+    }
+}
+
 // FIXME: would be nice to not require separate http-server tool here:
 function writeHttpServer(project: Project, config: Config) {
     const path = `${project.buildDir(config.name)}`;
@@ -172,6 +254,15 @@ const vscodeWasmDwarfDebugging: ToolDesc = {
     notFoundMsg:
         'required for WASM debugging in VSCode (see: https://marketplace.visualstudio.com/items?itemName=ms-vscode.wasm-dwarf-debugging)',
     exists: () => hasExtension('ms-vscode.wasm-dwarf-debugging'),
+};
+
+const vscodeCodeLLDB: ToolDesc = {
+    name: 'vscode-codelldb',
+    platforms: ['windows', 'macos', 'linux'],
+    optional: true,
+    notFoundMsg:
+        'required for Android debugging in VSCode (see: https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)',
+    exists: () => hasExtension('vadimcn.vscode-lldb'),
 };
 
 export const httpServerTool: ToolDesc = {
