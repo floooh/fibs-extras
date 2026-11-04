@@ -22,6 +22,7 @@ const androidAbi = 'arm64-v8a';
 const androidPlatform = 'android-30';
 const androidPackageRoot = 'org.fibs'
 const androidBuildToolsVersion = '34.0.0';
+const androidNdkVersion = '29.0.14206865';
 
 export function configure(c: Configurer) {
     addConfigs(c);
@@ -38,7 +39,9 @@ function addConfigs(c: Configurer) {
         platform: 'android',
         runner: 'android',
         buildMode: 'debug',
-        toolchainFile: `${c.sdkDir()}/android/ndk-bundle/build/cmake/android.toolchain.cmake`,
+        // NOTE: wrapper toolchain file written by 'fibs android install', this
+        // keeps the NDK version out of project-specific Android configs
+        toolchainFile: `${c.sdkDir()}/android/android.toolchain.cmake`,
         // FIXME: make configurable
         cmakeCacheVariables: {
             ANDROID_ABI: androidAbi,
@@ -48,7 +51,12 @@ function addConfigs(c: Configurer) {
             if (!util.dirExists(sdkDir(project))) {
                 return {
                     valid: false,
-                    hints: [`Android SDK not installed (run 'fibs android install)`],
+                    hints: [`Android SDK not installed (run 'fibs android install')`],
+                };
+            } else if (!util.dirExists(ndkDir(project))) {
+                return {
+                    valid: false,
+                    hints: [`Android NDK ${androidNdkVersion} not installed (run 'fibs android uninstall' and 'fibs android install')`],
                 };
             } else {
                 return { valid: true, hints: [] };
@@ -168,6 +176,10 @@ function sdkDir(project: Project): string {
     return `${project.sdkDir()}/android`;
 }
 
+function ndkDir(project: Project): string {
+    return `${sdkDir(project)}/ndk/${androidNdkVersion}`;
+}
+
 function cmdHelp() {
     log.helpCmd([
         'android install',
@@ -226,7 +238,16 @@ async function install(project: Project) {
     await installSdkPackage(project, `platforms;${androidPlatform}`);
     await installSdkPackage(project, `build-tools;${androidBuildToolsVersion}`);
     await installSdkPackage(project, 'platform-tools');
-    await installSdkPackage(project, 'ndk-bundle');
+    await installSdkPackage(project, `ndk;${androidNdkVersion}`);
+    writeToolchainWrapper(project);
+}
+
+// write a toolchain file at a fixed path which includes the versioned NDK toolchain file
+function writeToolchainWrapper(project: Project) {
+    const path = `${sdkDir(project)}/android.toolchain.cmake`;
+    const ndkToolchainPath = `${ndkDir(project)}/build/cmake/android.toolchain.cmake`.replaceAll('\\', '/');
+    Deno.writeTextFileSync(path, `include("${ndkToolchainPath}")\n`);
+    log.info(`written ${path}`);
 }
 
 async function downloadAndroidCmdlineToolsZip(project: Project) {

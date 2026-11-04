@@ -96,7 +96,8 @@ manifest += `<manifest xmlns:android="http://schemas.android.com/apk/res/android
 manifest += `  package="${pkgName}"\n`;
 manifest += `  android:versionCode="1"\n`;
 manifest += `  android:versionName="1.0">\n`;
-manifest += `  <uses-sdk android:minSdkVersion="11" android:targetSdkVersion="${platformVersion}"/>\n`;
+// NOTE: minSdkVersion must not be lower than the NDK platform level the .so was built for
+manifest += `  <uses-sdk android:minSdkVersion="${platformVersion}" android:targetSdkVersion="${platformVersion}"/>\n`;
 manifest += `  <uses-permission android:name="android.permission.INTERNET"></uses-permission>\n`;
 manifest += `  <uses-feature android:glEsVersion="0x00030000"></uses-feature>\n`;
 manifest += `  <application android:label="${name}" android:debuggable="true" android:hasCode="false">\n`;
