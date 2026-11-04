@@ -398,10 +398,11 @@ async function debug(project: Project, targetName: string, wait: boolean) {
         await adb(project, ['install', apkPath]);
     }
 
-    // lldb-server must run as app user from the app data dir to be able to attach
+    // lldb-server must run as app user from the app data dir to be able to attach,
+    // without --server it exits after the debug session, so it can't become an orphan
     await adb(project, ['push', lldbServerPath(project), '/data/local/tmp/lldb-server']);
     await adb(project, ['shell', `cat /data/local/tmp/lldb-server | run-as ${pkg} sh -c 'cat > ./lldb-server && chmod 700 ./lldb-server'`]);
-    await adb(project, ['shell', `run-as ${pkg} sh -c './lldb-server platform --server --listen unix-abstract://${socket} </dev/null >/dev/null 2>&1 &'`]);
+    await adb(project, ['shell', `run-as ${pkg} sh -c './lldb-server platform --listen unix-abstract://${socket} </dev/null >/dev/null 2>&1 &'`]);
 
     // with 'am start -D' the app waits for a JDWP debugger before loading the native lib
     await adb(project, ['shell', 'am', 'start', ...(wait ? ['-D'] : []), '-n', `${pkg}/android.app.NativeActivity`]);
