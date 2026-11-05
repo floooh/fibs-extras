@@ -1,3 +1,5 @@
+// LLM assisted.
+
 import { parseArgs } from 'jsr:@std/cli@^1/parse-args';
 import { copy } from 'jsr:@std/fs@^1';
 import { util } from 'jsr:@floooh/fibs@^1'
@@ -100,7 +102,10 @@ manifest += `  android:versionName="1.0">\n`;
 manifest += `  <uses-sdk android:minSdkVersion="${platformVersion}" android:targetSdkVersion="${platformVersion}"/>\n`;
 manifest += `  <uses-permission android:name="android.permission.INTERNET"></uses-permission>\n`;
 manifest += `  <uses-feature android:glEsVersion="0x00030000"></uses-feature>\n`;
-manifest += `  <application android:label="${name}" android:debuggable="true" android:hasCode="false">\n`;
+// NOTE: opt out of predictive back so that AKEYCODE_BACK keeps being delivered to the NativeActivity,
+// the attribute only exists since API level 33 (older android.jar versions would fail in aapt)
+const backCallbackAttr = (Number(platformVersion) >= 33) ? ' android:enableOnBackInvokedCallback="false"' : '';
+manifest += `  <application android:label="${name}" android:debuggable="true" android:hasCode="false"${backCallbackAttr}>\n`;
 manifest += `    <activity android:name="android.app.NativeActivity"\n`;
 manifest += `      android:label="${name}"\n`;
 manifest += `      android:launchMode="singleTask"\n`;
