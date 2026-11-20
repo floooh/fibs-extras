@@ -114,6 +114,7 @@ function addConfigs(c: Configurer) {
     const baseConfig: ConfigDesc = {
         name: 'emsc',
         platform: 'emscripten',
+        compiler: 'clang',
         runner: 'emscripten',
         buildMode: 'debug',
         toolchainFile: `${c.sdkDir()}/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake`,

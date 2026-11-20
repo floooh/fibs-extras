@@ -34,6 +34,7 @@ function addConfigs(c: Configurer) {
     const baseConfig: ConfigDesc = {
         name: 'wasi',
         platform: 'wasi',
+        compiler: 'clang',
         runner: 'wasi',
         toolchainFile: `${c.sdkDir()}/wasisdk/share/cmake/wasi-sdk.cmake`,
         buildMode: 'debug',

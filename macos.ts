@@ -50,6 +50,7 @@ function addConfigs(c: Configurer) {
     const baseConfig: ConfigDesc = {
         name: 'macos',
         platform: 'macos',
+        compiler: 'appleclang',
         buildMode: 'debug',
         generator: 'xcode',
         opener: 'xcode',

@@ -19,6 +19,7 @@ function addConfigs(c: Configurer) {
     const baseConfig: ConfigDesc = {
         name: 'win-base',
         platform: 'windows',
+        compiler: 'msvc',
         opener: 'vstudio',
         buildMode: 'debug',
     };

@@ -40,6 +40,7 @@ function addConfigs(c: Configurer) {
     const baseConfig: ConfigDesc = {
         name: 'android',
         platform: 'android',
+        compiler: 'clang',
         runner: 'android',
         buildMode: 'debug',
         // NOTE: wrapper toolchain file written by 'fibs android install', this

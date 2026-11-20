@@ -12,8 +12,8 @@ export function configure(c: Configurer) {
 }
 
 function addConfigs(c: Configurer) {
-    const win = { platform: 'windows' };
-    const mac = { platform: 'macos' };
+    const win = { platform: 'windows', compiler: 'msvc' };
+    const mac = { platform: 'macos', compiler: 'appleclang' };
     const linux = { platform: 'linux' };
     const vscode = { generator: 'ninja', opener: 'vscode' };
     const release = { buildMode: 'release' };
