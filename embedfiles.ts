@@ -34,7 +34,7 @@
  *    });
  */
 import { Config, Configurer, log, Project, Schema, Target, util } from 'jsr:@floooh/fibs@^1';
-import { basename, dirname } from 'jsr:@std/path@^1';
+import { basename } from 'jsr:@std/path@^1';
 
 type Args = {
     dir?: string;
@@ -58,8 +58,16 @@ const schema: Schema = {
     asStatic: { type: 'boolean', optional: true, desc: "if true, emit static data (default: true)" },
 };
 
+type RunArgs = {
+    prefix: string;
+    list: boolean;
+    asText: boolean;
+    asConst: boolean;
+    asStatic: boolean;
+};
+
 export function configure(c: Configurer) {
-    c.addJob({ name: 'embedfiles', help, validate, build: buildJob });
+    c.addJob({ name: 'embedfiles', help, validate, build: buildJob, run });
 }
 
 function help() {
@@ -70,7 +78,7 @@ function validate(args: unknown) {
     return util.validate(args, schema);
 }
 
-function buildJob(p: Project, c: Config, t: Target, args: unknown) {
+function buildJob(_p: Project, _c: Config, t: Target, args: unknown) {
     const {
         dir = t.dir,
         files,
@@ -81,60 +89,60 @@ function buildJob(p: Project, c: Config, t: Target, args: unknown) {
         asConst = true,
         asStatic = true,
     } = util.safeCast<Args>(args, schema);
+    const runArgs: RunArgs = { prefix, list, asText, asConst, asStatic };
     return {
         name: 'embedfiles',
         inputs: files.map((file) => `${dir}/${file}`),
         outputs: [`${dir}/${outHeader}`],
         addOutputsToTargetSources: true,
-        args: { dir, files, outHeader, prefix, list, asText },
-        func: async (inputs: string[], outputs: string[], args: Args): Promise<void> => {
-            if (!util.dirty(inputs, outputs)) {
-                return;
-            }
-            util.ensureDir(dirname(outputs[0]));
-            let items: { name: string; cname: string; size: number }[] = [];
-            const constStr = asConst ? 'const ' : '';
-            const staticStr = asStatic ? 'static ' : '';
-            let str = '';
-            str += '#pragma once\n';
-            str += '// machine generated, do not edit!\n';
-            str += '#include <stdint.h>\n';
-            str += '#include <stddef.h>\n';
-            for (const input of inputs) {
-                log.info(`# embed ${input} => ${outputs[0]}`);
-                const bytes = await Deno.readFile(input);
-                const name = basename(input).replace('.', '_');
-                const cname = `${args.prefix}${name}`;
-                items.push({ name, cname, size: bytes.length });
-                if (args.asText) {
-                    str += `${staticStr}${constStr}char ${cname}[${bytes.length + 1}] = {\n`;
-                } else {
-                    str += `${staticStr}${constStr}uint8_t ${cname}[${bytes.length}] = {\n`;
-                }
-                for (const [i, byte] of bytes.entries()) {
-                    str += `0x${byte.toString(16).padStart(2, '0')}, `;
-                    if (((i + 1) % 16) === 0) {
-                        str += '\n';
-                    }
-                }
-                if (args.asText) {
-                    str += '0\n};\n';
-                } else {
-                    str += '\n};\n';
-                }
-            }
-            if (args.list) {
-                str += `typedef struct { const char* name; const uint8_t* ptr; size_t size; } ${args.prefix}item_t;\n`;
-                const numItemsDefine = `${args.prefix!.toUpperCase()}NUM_ITEMS`;
-                str += `#define ${numItemsDefine} (${inputs.length})\n`;
-                str += `${staticStr}${constStr}${args.prefix}item_t ${args.prefix}items[${numItemsDefine}] = {\n`;
-                items = items.toSorted((a, b) => a.name.localeCompare(b.name));
-                for (const item of items) {
-                    str += `{ "${item.name}", ${item.cname}, ${item.size} },\n`;
-                }
-                str += '};\n';
-            }
-            await Deno.writeTextFile(outputs[0], str);
-        },
+        args: runArgs,
     };
+}
+
+// runs at build time in a separate process
+async function run(inputs: string[], outputs: string[], args: RunArgs): Promise<void> {
+    const { prefix, list, asText, asConst, asStatic } = args;
+    let items: { name: string; cname: string; size: number }[] = [];
+    const constStr = asConst ? 'const ' : '';
+    const staticStr = asStatic ? 'static ' : '';
+    let str = '';
+    str += '#pragma once\n';
+    str += '// machine generated, do not edit!\n';
+    str += '#include <stdint.h>\n';
+    str += '#include <stddef.h>\n';
+    for (const input of inputs) {
+        log.info(`# embed ${input} => ${outputs[0]}`);
+        const bytes = await Deno.readFile(input);
+        const name = basename(input).replace('.', '_');
+        const cname = `${prefix}${name}`;
+        items.push({ name, cname, size: bytes.length });
+        if (asText) {
+            str += `${staticStr}${constStr}char ${cname}[${bytes.length + 1}] = {\n`;
+        } else {
+            str += `${staticStr}${constStr}uint8_t ${cname}[${bytes.length}] = {\n`;
+        }
+        for (const [i, byte] of bytes.entries()) {
+            str += `0x${byte.toString(16).padStart(2, '0')}, `;
+            if (((i + 1) % 16) === 0) {
+                str += '\n';
+            }
+        }
+        if (asText) {
+            str += '0\n};\n';
+        } else {
+            str += '\n};\n';
+        }
+    }
+    if (list) {
+        str += `typedef struct { const char* name; const uint8_t* ptr; size_t size; } ${prefix}item_t;\n`;
+        const numItemsDefine = `${prefix.toUpperCase()}NUM_ITEMS`;
+        str += `#define ${numItemsDefine} (${inputs.length})\n`;
+        str += `${staticStr}${constStr}${prefix}item_t ${prefix}items[${numItemsDefine}] = {\n`;
+        items = items.toSorted((a, b) => a.name.localeCompare(b.name));
+        for (const item of items) {
+            str += `{ "${item.name}", ${item.cname}, ${item.size} },\n`;
+        }
+        str += '};\n';
+    }
+    await Deno.writeTextFile(outputs[0], str);
 }

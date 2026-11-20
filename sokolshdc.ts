@@ -4,7 +4,7 @@
     // FIXME: description
 */
 import { Config, Configurer, log, Project, Schema, Target, util } from 'jsr:@floooh/fibs@^1';
-import { basename, dirname } from 'jsr:@std/path@^1';
+import { basename } from 'jsr:@std/path@^1';
 
 const VERSION = 1;
 
@@ -19,6 +19,7 @@ type Args = {
     module?: string;
     reflection?: boolean;
     errfmt?: string;
+    shdcTarget?: string;
 };
 
 const schema: Schema = {
@@ -32,6 +33,7 @@ const schema: Schema = {
     module: { type: 'string', optional: true, desc: 'optional module prefix override' },
     reflection: { type: 'boolean', optional: true, desc: 'enable/disable reflection generation (default: false)' },
     errfmt: { type: 'string', optional: true, desc: 'optional error output format' },
+    shdcTarget: { type: 'string', optional: true, desc: 'optional sokol-shdc target built by the project (default: prebuilt sokol-shdc)' },
 };
 
 export function configure(c: Configurer) {
@@ -62,62 +64,43 @@ function buildJob(p: Project, c: Config, t: Target, args: unknown) {
         module,
         reflection = false,
         errfmt,
+        shdcTarget,
     } = util.safeCast<Args>(args, schema);
+    const input = `${srcDir}/${src}`;
+    const output = `${outDir}/${out}`;
+    // NOTE: the prebuilt sokol-shdc import isn't needed when sokol-shdc is built by the project
+    const shdc = (shdcTarget === undefined) ? getShdcPath(p) : { target: shdcTarget };
+    const shdcArgs = [
+        '--input',
+        input,
+        '--output',
+        output,
+        '--genver',
+        `${VERSION}`,
+        '--slang',
+        slang,
+        '--errfmt',
+        getErrFmt(p, errfmt),
+        '--format',
+        fmt,
+        '--bytecode',
+    ];
+    if (defines !== undefined) {
+        shdcArgs.push('--defines', defines.join(':'));
+    }
+    if (module !== undefined) {
+        shdcArgs.push('--module', module);
+    }
+    if (reflection === true) {
+        shdcArgs.push('--reflection');
+    }
     return {
         name: 'sokolshdc',
-        inputs: [`${srcDir}/${src}`],
-        outputs: [`${outDir}/${out}`],
+        // NOTE: a prebuilt sokol-shdc is an input so that shaders are recompiled when sokol-shdc is updated
+        inputs: (typeof shdc === 'string') ? [input, shdc] : [input],
+        outputs: [output],
         addOutputsToTargetSources: true,
-        args: {
-            srcDir,
-            outDir,
-            src,
-            out,
-            slang,
-            fmt,
-            defines,
-            module,
-            reflection,
-            errfmt,
-        },
-        func: async (inputs: string[], outputs: string[], args: Args) => {
-            if (util.dirty(inputs, outputs)) {
-                util.ensureDir(dirname(outputs[0]));
-                const shdcArgs = [
-                    '--input',
-                    inputs[0],
-                    '--output',
-                    outputs[0],
-                    '--genver',
-                    `${VERSION}`,
-                    '--slang',
-                    slang,
-                    '--errfmt',
-                    getErrFmt(p, errfmt),
-                    '--format',
-                    fmt,
-                    '--bytecode',
-                ];
-                if (defines !== undefined) {
-                    shdcArgs.push('--defines', defines.join(':'));
-                }
-                if (module !== undefined) {
-                    shdcArgs.push('--module', module);
-                }
-                if (reflection === true) {
-                    shdcArgs.push('--reflection');
-                }
-                const res = await util.runCmd(getShdcPath(p), {
-                    args: shdcArgs,
-                    cwd: p.dir(),
-                    showCmd: true,
-                    winUseCmd: true,
-                });
-                if (res.exitCode !== 0) {
-                    throw new Error(`sokol-shdc failed with exit code ${res.exitCode}`);
-                }
-            }
-        },
+        commands: [[shdc, ...shdcArgs]],
     };
 }
 
@@ -130,7 +113,8 @@ function getShdcPath(p: Project): string {
     } else {
         dir = (p.hostArch() === 'arm64') ? 'linux_arm64' : 'linux';
     }
-    return `${p.import('sokol-shdc').importDir}/bin/${dir}/sokol-shdc`;
+    const exe = p.isHostWindows() ? '.exe' : '';
+    return `${p.import('sokol-shdc').importDir}/bin/${dir}/sokol-shdc${exe}`;
 }
 
 function getDefaultSlang(p: Project): string {

@@ -26,8 +26,6 @@
     });
 */
 import { Config, Configurer, log, Project, Schema, Target, util } from 'jsr:@floooh/fibs@^1';
-import { copySync } from 'jsr:@std/fs@^1';
-import { dirname } from 'jsr:@std/path@^1';
 
 type Args = {
     srcDir?: string;
@@ -59,22 +57,13 @@ function buildJob(p: Project, c: Config, t: Target, args: unknown) {
         dstDir = p.targetAssetsDir(t.name, c.name),
         files,
     } = util.safeCast<Args>(args, schema);
+    const inputs = files.map((file) => `${srcDir}/${file}`);
+    const outputs = files.map((file) => `${dstDir}/${file}`);
     return {
         name: 'copyfiles',
-        inputs: files.map((file) => `${srcDir}/${file}`),
-        outputs: files.map((file) => `${dstDir}/${file}`),
+        inputs,
+        outputs,
         addOutputsToTargetSources: false,
-        args: { srcDir, dstDir, files },
-        func: async (inputs: string[], outputs: string[], _args: Args): Promise<void> => {
-            for (let i = 0; i < inputs.length; i++) {
-                const from = inputs[i];
-                const to = outputs[i];
-                if (util.dirty([from], [to])) {
-                    log.info(`# cp ${from} ${to}`);
-                    util.ensureDir(dirname(to));
-                    copySync(from, to, { overwrite: true });
-                }
-            }
-        },
+        commands: inputs.map((input, i) => ['cmake', '-E', 'copy_if_different', input, outputs[i]]),
     };
 }
