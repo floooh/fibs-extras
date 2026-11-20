@@ -266,7 +266,9 @@ async function cloneOrUpdateEmsdk(project: Project) {
     const dir = emsdkDir(project);
     if (util.dirExists(dir)) {
         log.section(`updating emsdk in ${dir}`);
-        await git.update({ dir, url: EMSDK_URL, force: true });
+        if (!await git.update({ dir: sdkRoot, url: EMSDK_URL, force: true })) {
+            throw new Error(`updating emsdk in ${dir} failed`);
+        }
     } else {
         log.section(`cloning emsdk to ${dir} `);
         await git.clone({ url: EMSDK_URL, dir: sdkRoot });
